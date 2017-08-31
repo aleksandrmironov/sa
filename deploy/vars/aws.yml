@@ -1,0 +1,20 @@
+---
+project: 'test_app'
+elb_name: 'test_app'
+health_check_period: '60'
+min_asg_size: 1
+max_asg_size: 1
+asg_desired_capacity: 1
+
+subnets:
+  - 'subnet-xxx1'
+  - 'subnet-xxx0'
+
+security_groups:
+  - 'sg-xxx'
+
+ami_id: ''
+instance_type: 'm3.medium'
+
+key_name: 'test_app'
+

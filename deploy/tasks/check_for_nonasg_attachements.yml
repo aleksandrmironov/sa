@@ -1,0 +1,65 @@
+---
+
+- name: create an ELB
+  local_action:
+    module: ec2_elb_lb
+    name: "{{ elb_name }}"
+    state: present
+    subnets: "{{ subnets }}"
+    tags:
+      User: "test_app"
+    listeners:
+      - protocol: http
+        load_balancer_port: 80
+        instance_port: 80
+        proxy_protocol: True
+
+- name: get new ELB facts
+  action:
+    module: ec2_elb_facts
+    names: "{{ elb_name }}"
+  register: elb_facts
+
+- name: "get instances info"
+  aws:
+    service: ec2
+    method: describe_instances
+    params:
+      InstanceIds:
+        - '{{item}}'
+  with_items: '{{ elb_facts.elbs[0].instances }}'
+  register: instances_attached_to_elb
+
+#- debug: var=instances_attached_to_elb
+
+- set_fact:
+    instances_tags: []
+
+- set_fact:
+    instances_tags: "{{ instances_tags + [ item.reservations[0].instances[0].tags ] }}"
+  with_items: "{{ instances_attached_to_elb.results }}"
+
+- set_fact:
+    attached_asgs: []
+
+- set_fact:
+    attached_asgs:  "{{ attached_asgs + [ item.value ] }}"
+  with_items: "{{ instances_tags }}"
+  when: item.key == "aws:autoscaling:groupName"
+
+- name: Check if all ELB targets are autoscaling group members
+  fail:
+    msg: "There are non-autoscaling group targets"
+  when: attached_asgs|length != instances_attached_to_elb.results|length
+
+- ec2_asg_facts:
+    name: "{{ item }}"
+  with_items: "{{ attached_asgs }}"
+  register: lc_facts
+
+- set_fact:
+    lcs_inuse: []
+
+- set_fact:
+    lcs_inuse: "{{ lcs_inuse + [ item.results[0].launch_configuration_name ] }}"
+  with_items: "{{ lc_facts.results }}"

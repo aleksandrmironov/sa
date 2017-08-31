@@ -1,0 +1,63 @@
+---
+- hosts: localhost
+  connection: local
+  gather_facts: no
+  vars:
+    alb:
+      name: v2test
+      subnets:
+      - subnet-a5c9c2fd
+      - subnet-d46369fe
+      scheme: internet-facing
+      security_groups:
+      - sg-9d5bdde0
+      tags:
+      - Key: Environment
+        Value: Demo19
+      listeners:
+      - protocol: http
+        port: 80
+#        ssl_policy:
+#        certificates:
+#        default_actions:
+        target_groups:
+        - name: general-public
+          protocol: HTTP
+          port: 80
+          vpc_id: vpc-bc285adb
+          health_check_protocol: HTTP
+          health_check_port: _80
+          health_check_path: /
+          health_check_interval_seconds: 30
+          health_check_timeout_seconds: 5
+          healthy_threshold_count: 5
+          unhealthy_threshold_count: 2
+#          matcher:
+#            http_code:
+          rule:
+            conditions:
+            - Field: path-pattern
+              Values: ['/api/*']
+            priority: 100
+
+
+  tasks:
+  - name: "Create Application Load Balancers"
+    aws:
+      service: elbv2
+      method: create_load_balancer
+      params:
+        Name: "{{ alb.name }}"
+        Subnets: "{{ alb.subnets  }}"
+        Scheme: "{{ alb.scheme | default('internet-facing') }}"
+        SecurityGroups: "{{ alb.security_groups | default(omit) }}"
+        Tags: "{{ alb.tags | default(omit) }}"
+
+    register: alb_info
+
+  - name: "Create Listener"
+    include: listener.yml
+
+    with_items: "{{ alb.listeners }}"
+    loop_control:
+      loop_var: listener

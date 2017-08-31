@@ -1,0 +1,26 @@
+- name: localhost
+  hosts: 127.0.0.1
+  sudo: yes
+
+  roles:
+    - docker
+
+  post_tasks:
+    - name: Get app version
+      git:
+        repo: https://github.com/aleksandrmironov/sa.git
+        dest: /clone
+
+    - name: Get python app
+      docker_container:
+        name: app
+        hostname: app
+        image: python:2.7.13-jessie
+        state: started
+        restart: yes
+        restart_policy: always
+        command: python /app/main.py
+        ports:
+          - "80:80"
+        volumes:
+          - "/clone/app:/app:rw"

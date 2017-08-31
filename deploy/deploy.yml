@@ -1,0 +1,17 @@
+---
+
+- name: Create Autoscaling group
+  hosts: localhost
+
+  vars_files:
+    - 'vars/aws.yml'
+
+  tasks:
+    - name: Check instances attached to EBL
+      include: 'tasks/check_for_nonasg_attachements.yml'
+
+    - name: Create new ASG
+      include: 'tasks/create_asg.yml'
+
+    - name: Switch to a new ASG
+      include: 'tasks/asg_swap.yml'

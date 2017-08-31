@@ -1,0 +1,33 @@
+---
+
+- name: attach new ASG to LB
+  aws:
+    service: autoscaling
+    method: attach_load_balancers
+    params:
+      AutoScalingGroupName: "{{ new_asg_name }}"
+      LoadBalancerNames:
+        - "{{ elb_name }}"
+
+- name: detach old ASG(s) from LB
+  aws:
+    service: autoscaling
+    method: detach_load_balancers
+    params:
+      AutoScalingGroupName: "{{ item }}"
+      LoadBalancerNames:
+        - "{{ elb_name }}"
+  with_items: "{{ attached_asgs|unique }}"
+  register: elb_attach_status
+
+- name: remove old ASG
+  ec2_asg:
+    name: "{{ item }}"
+    state: absent
+  with_items: "{{ attached_asgs|unique }}"
+
+- name: remove old LCs
+  ec2_lc:
+    name: "{{ item }}"
+    state: absent
+  with_items: "{{ lcs_inuse }}"

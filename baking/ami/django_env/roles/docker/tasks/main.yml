@@ -1,0 +1,17 @@
+---
+# tasks file for docker
+- name: Docker repo key installation
+  apt_key: keyserver={{ docker_keyserver }} id={{ docker_keyid }}
+
+- name: Install docker repo list
+  template: src=docker.list.j2 dest=/etc/apt/sources.list.d/docker.list
+
+- name: Docker-engine installation
+  apt: name=docker-engine state=latest update_cache=yes
+
+- name: Python-pip installation
+  apt: name=python-pip state=latest
+
+- name: Install docker-py
+  pip:
+    name: docker-py

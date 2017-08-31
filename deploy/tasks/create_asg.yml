@@ -1,0 +1,36 @@
+---
+
+- name: generate an unique postfix
+  set_fact:
+    mydate: "{{lookup('pipe','date +%Y%m%d%H%M%S')}}"
+
+- name: set names for ASG and LC
+  set_fact:
+    new_lc_name: "{{ project }}-website-lc-{{ mydate }}"
+    new_asg_name: "{{ project }}-asg-{{ mydate }}"
+
+- name: create a new launch config
+  ec2_lc:
+    name: "{{ new_lc_name }}"
+    image_id: "{{ ami_id }}"
+    key_name: "{{ key_name }}"
+    security_groups: "{{ security_groups }}"
+    instance_type: "{{ instance_type }}"
+    assign_public_ip: yes
+
+
+- name: create a new ASG
+  ec2_asg:
+    name: "{{ new_asg_name }}"
+    launch_config_name: "{{ new_lc_name }}"
+    health_check_period: "{{ health_check_period }}"
+    health_check_type: EC2
+    replace_all_instances: yes
+    min_size: "{{ min_asg_size }}"
+    max_size: "{{ max_asg_size }}"
+    desired_capacity: "{{ asg_desired_capacity }}"
+    vpc_zone_identifier: "{{ subnets }}"
+
+- ec2_asg_facts:
+    name: "{{ new_asg_name }}"
+  register: new_asg_facts

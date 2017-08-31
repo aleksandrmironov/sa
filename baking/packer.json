@@ -1,0 +1,72 @@
+{
+  "variables":{
+    "hvm_amiid":"ami-xxx",
+    "region":"us-east-1",
+    "playbook": "",
+    "aws_access_key": "",
+    "aws_secret_key": "",
+    "version": "",
+    "ansible_version": "2.3.2.0"
+  },
+  "builders":[
+  {
+        "name":"hvm_builder",
+          "type": "amazon-ebs",
+          "instance_type": "m3.medium",
+          "access_key": "{{user `aws_access_key`}}",
+          "secret_key": "{{user `aws_secret_key`}}",
+          "ami_virtualization_type": "hvm",
+          "source_ami": "{{user `hvm_amiid`}}",
+          "ami_name": "{{user `playbook`}}_{{user `version`}}",
+          "region":"us-east-1",
+          "ssh_username": "ubuntu",
+          "subnet_id": "subnet-xxx",
+          "associate_public_ip_address": true,
+          "vpc_id": "vpc-xxx",
+          "security_group_id": "sg-xxx",
+          "tags": {
+            "Name":"{{user `playbook`}}",
+            "virtualization_type":"hvm",
+            "User": "USER"
+       	  },
+          "ami_block_device_mappings": [{
+            "device_name": "/dev/sda1",
+            "delete_on_termination": true,
+            "volume_size": 20,
+            "volume_type": "gp2"
+          }],
+          "launch_block_device_mappings": [{
+            "device_name": "/dev/sda1",
+            "delete_on_termination": true,
+            "volume_size": 20,
+            "volume_type": "gp2"
+          }]
+  }
+ ],
+ "provisioners":[
+  {
+    "type":"shell",
+    "inline_shebang":"/bin/bash",
+    "inline":[
+      "sudo apt-get -y update",
+      "sudo apt-get -y install git python-pip python-dev libffi-dev libssl-dev libxml2-dev libxslt1-dev zlib1g-dev build-essential",
+      "sudo pip install ansible=={{user `ansible_version`}}",
+      "sudo mkdir -p /tmp/playbook",
+      "sudo chmod 777 /tmp/playbook"
+    ]
+  },
+  {
+      "type": "file",
+      "source":"ami/{{user `playbook`}}/",
+      "destination": "/tmp/playbook"
+  },
+  {
+    "type":"shell",
+    "inline_shebang":"/bin/bash",
+    "inline":[
+      "cd /tmp/playbook && ansible-playbook -e 'software_repo_username={{user `software_repo_username`}} software_repo_password={{user `software_repo_password`}}' playbook.yml"
+    ]
+  }
+ ]
+
+}
